@@ -7,6 +7,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+# [Unreleased]
+
+- Added MQTT over QUIC transport support (`quic://` URIs) when the Paho C library is built with `PAHO_WITH_QUIC`
+    - New CMake option `PAHO_WITH_QUIC` (requires `PAHO_WITH_SSL`); passed through to a bundled Paho C build
+    - Documented QUIC URI, default port 14567, ALPN, no HTTP proxy, and `servers()` fallback
+    - Examples: `quic_publish`, `quic_subscribe`, `quic_fallback`
+- Replaced the Paho C submodule `externals/paho.mqtt.c` (upstream v1.3.16) with `externals/paho-mqtt-c`, tracking the `develop` branch of https://github.com/lizhanhui/paho.mqtt.c (v1.3.16 with QUIC support). The bundled C build now uses that directory.
+
+
 # [Version 1.6.0](https://github.com/eclipse/paho.mqtt.cpp/compare/v1.5.3..v1.6.0) (2026-02-24)
 
 - Bumped Paho C submodule to v1.3.16 and updated directory name to externals/paho.mqtt.c

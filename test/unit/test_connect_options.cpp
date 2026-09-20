@@ -45,7 +45,8 @@ static const std::string PASSWD{"xyzpdq"};
 static const std::string EMPTY_STR;
 
 static const std::vector<string> URIsVec = {
-    "mqtt://server1:1883", "mqtt://server2:1883", "mqtts://server3:8883"
+    "mqtt://server1:1883", "mqtt://server2:1883", "mqtts://server3:8883",
+    "quic://server4:14567"
 };
 const const_string_collection_ptr URIs = std::make_shared<const string_collection>(URIsVec);
 
@@ -546,6 +547,7 @@ TEST_CASE("set_token", "[options]")
         REQUIRE(0 == strcmp(URIsVec[0].c_str(), c_struct.serverURIs[0]));
         REQUIRE(0 == strcmp(URIsVec[1].c_str(), c_struct.serverURIs[1]));
         REQUIRE(0 == strcmp(URIsVec[2].c_str(), c_struct.serverURIs[2]));
+        REQUIRE(0 == strcmp(URIsVec[3].c_str(), c_struct.serverURIs[3]));
     }
 
     SECTION("set auto reconnect")

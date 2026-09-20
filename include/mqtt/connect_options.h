@@ -256,16 +256,16 @@ public:
     /**
      * Sets the SSL for the connection.
      * These will only have an effect if compiled against the SSL version of
-     * the Paho C library, and using a secure connection, "ssl://" or
-     * "wss://".
+     * the Paho C library, and using a secure connection, "ssl://",
+     * "mqtts://", "wss://", or "quic://".
      * @param ssl The SSL options.
      */
     void set_ssl(const ssl_options& ssl);
     /**
      * Sets the SSL for the connection.
      * These will only have an effect if compiled against the SSL version of
-     * the Paho C library, and using a secure connection, "ssl://" or
-     * "wss://".
+     * the Paho C library, and using a secure connection, "ssl://",
+     * "mqtts://", "wss://", or "quic://".
      * @param ssl The SSL options.
      */
     void set_ssl(ssl_options&& ssl);
@@ -289,8 +289,9 @@ public:
     /**
      * Gets the list of servers to which the client will connect.
      * @return A collection of server URI's. Each entry should be of the
-     *  	   form @em protocol://host:port where @em protocol must be tcp
-     *  	   or @em ssl. For @em host, you can specify either an IP
+     *  	   form @em protocol://host:port where @em protocol may be
+     *  	   @em tcp, @em mqtt, @em ssl, @em mqtts, @em ws, @em wss, or
+     *  	   @em quic. For @em host, you can specify either an IP
      *  	   address or a domain name.
      */
     const_string_collection_ptr get_servers() const { return serverURIs_; }
@@ -437,10 +438,14 @@ public:
     void set_token(const token_ptr& tok);
     /**
      * Sets the list of servers to which the client will connect.
+     * The client tries the URIs in order. This is the supported way to
+     * fall back from QUIC to TLS if UDP is blocked, e.g.
+     * `{ "quic://broker:14567", "ssl://broker:8883" }`.
      * @param serverURIs A pointer to a collection of server URI's. Each
      *  				 entry should be of the form @em
-     *  				 protocol://host:port where @em protocol must be
-     *  				 @em tcp or @em ssl. For @em host, you can specify
+     *  				 protocol://host:port where @em protocol may be
+     *  				 @em tcp, @em mqtt, @em ssl, @em mqtts, @em ws,
+     *  				 @em wss, or @em quic. For @em host, you can specify
      *  				 either an IP address or a domain name.
      */
     void set_servers(const_string_collection_ptr serverURIs);
@@ -542,6 +547,9 @@ public:
     string get_http_proxy() const { return httpProxy_; }
     /**
      * Sets the HTTP proxy setting.
+     * HTTP proxies are TCP CONNECT tunnels and cannot carry QUIC. A
+     * @em quic:// URI attempted while a proxy is configured fails so that
+     * @em serverURIs can fall through to @em ssl:// or @em tcp://.
      * @param httpProxy The HTTP proxy setting. An empty string means no
      *  			  proxy.
      */
@@ -553,6 +561,9 @@ public:
     string get_https_proxy() const { return httpsProxy_; }
     /**
      * Sets the secure HTTPS proxy setting.
+     * HTTPS proxies are TCP CONNECT tunnels and cannot carry QUIC. A
+     * @em quic:// URI attempted while a proxy is configured fails so that
+     * @em serverURIs can fall through to @em ssl:// or @em tcp://.
      * @param httpsProxy The HTTPS proxy setting. An empty string means no
      *  			 proxy.
      */
@@ -797,7 +808,8 @@ public:
     /**
      * Sets the SSL options for the connection.
      * These will only have an effect if compiled against the SSL version of
-     * the Paho C library, and connecting with a secure URI.
+     * the Paho C library, and connecting with a secure URI
+     * ("ssl://", "mqtts://", "wss://", or "quic://").
      * @param ssl The SSL options.
      */
     auto ssl(const ssl_options& ssl) -> self& {
@@ -807,7 +819,8 @@ public:
     /**
      * Sets the SSL options for the connection.
      * These will only have an effect if compiled against the SSL version of
-     * the Paho C library, and connecting with a secure URI.
+     * the Paho C library, and connecting with a secure URI
+     * ("ssl://", "mqtts://", "wss://", or "quic://").
      * @param ssl The SSL options.
      */
     auto ssl(ssl_options&& ssl) -> self& {
@@ -824,10 +837,14 @@ public:
     }
     /**
      * Sets the list of servers to which the client will connect.
+     * The client tries the URIs in order. Use this to fall back from QUIC
+     * to TLS if UDP is blocked, e.g.
+     * `{ "quic://broker:14567", "ssl://broker:8883" }`.
      * @param serverURIs A pointer to a collection of server URI's. Each
      *  				 entry should be of the form @em
-     *  				 protocol://host:port where @em protocol must be
-     *  				 @em tcp or @em ssl. For @em host, you can specify
+     *  				 protocol://host:port where @em protocol may be
+     *  				 @em tcp, @em mqtt, @em ssl, @em mqtts, @em ws,
+     *  				 @em wss, or @em quic. For @em host, you can specify
      *  				 either an IP address or a domain name.
      */
     auto servers(const_string_collection_ptr serverURIs) -> self& {
@@ -924,6 +941,8 @@ public:
     }
     /**
      * Sets the HTTP proxy setting.
+     * HTTP proxies cannot carry QUIC. A @em quic:// URI attempted while a
+     * proxy is configured fails so that @em serverURIs can fall through.
      * @param httpProxy The HTTP proxy setting. An empty string means no
      *  			  proxy.
      */
@@ -933,6 +952,8 @@ public:
     }
     /**
      * Sets the secure HTTPS proxy setting.
+     * HTTPS proxies cannot carry QUIC. A @em quic:// URI attempted while a
+     * proxy is configured fails so that @em serverURIs can fall through.
      * @param httpsProxy The HTTPS proxy setting. An empty string means no
      *  			 proxy.
      */

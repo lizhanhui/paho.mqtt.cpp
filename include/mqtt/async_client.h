@@ -93,13 +93,19 @@ const string COPYRIGHT{PAHO_MQTTPP_COPYRIGHT};
  * @li @em "mqtts://" - A secure connection using SSL/TLS sockets. (Also
  * "ssl://")
  * @li @em "ws://" - A standard (insecure) WebSocket connection.
- * @li @em "wss:// - A secure websocket connection using SSL/TLS.
+ * @li @em "wss://" - A secure websocket connection using SSL/TLS.
  * @li @em "unix://" - A UNIX-domain connection on the local machine. (*nix
  * systems, only)
+ * @li @em "quic://" - MQTT over QUIC. Always TLS-secured. Requires the
+ * Paho C library built with `PAHO_WITH_QUIC`. A URI without an explicit
+ * port defaults to 14567. HTTP(S) proxies are not supported. There is no
+ * automatic TCP fallback; use `connect_options::set_servers()` with a
+ * `quic://` URI first and an `ssl://` or `tcp://` URI second.
  *
  * The secure connection types assume that the library was built with
  * SSL/TLS support, otherwise requesting a secure connection will result in
- * an error.
+ * an error. QUIC connections also require `ssl_options` on the
+ * `connect_options` (the C library negotiates the `mqtt` ALPN protocol).
  *
  * The communication methods of this class - `connect()`, `publish()`,
  * `subscribe()`, etc. - are all asynchronous. They create the request for

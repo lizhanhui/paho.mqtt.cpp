@@ -41,7 +41,12 @@ namespace mqtt {
 /////////////////////////////////////////////////////////////////////////////
 
 /**
- * Holds the set of SSL options for connection.
+ * Holds the set of SSL/TLS options for a connection.
+ *
+ * These options also apply to MQTT over QUIC (`quic://` URIs). QUIC is
+ * always TLS-secured; the underlying Paho C library negotiates the
+ * `mqtt` ALPN protocol. QUIC is selected by the server URI, not by
+ * `set_ssl_version()`.
  */
 class ssl_options
 {
@@ -300,6 +305,9 @@ public:
     /**
      * Set the SSL/TLS version to use.
      *
+     * MQTT over QUIC is selected by a @em quic:// server URI, not by
+     * setting this version.
+     *
      * @param ver The desired SSL/TLS version. Specify one of:
      *  	@li MQTT_SSL_VERSION_DEFAULT (0)
      *  	@li MQTT_SSL_VERSION_TLS_1_0 (1)
@@ -453,6 +461,9 @@ public:
     }
     /**
      * Set the SSL/TLS version to use.
+     *
+     * MQTT over QUIC is selected by a @em quic:// server URI, not by
+     * setting this version.
      *
      * @param ver The desired SSL/TLS version. Specify one of:
      *  	@li MQTT_SSL_VERSION_DEFAULT (0)

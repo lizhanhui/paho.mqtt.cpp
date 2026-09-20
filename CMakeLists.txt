@@ -44,9 +44,14 @@ option(PAHO_BUILD_EXAMPLES "Build sample/example programs" FALSE)
 option(PAHO_BUILD_TESTS "Build tests (requires Catch2)" FALSE)
 option(PAHO_BUILD_DOCUMENTATION "Create and install the API documentation (requires Doxygen)" FALSE)
 option(PAHO_WITH_MQTT_C "Build Paho C from the internal GIT submodule." FALSE)
+option(PAHO_WITH_QUIC "Enable MQTT over QUIC (quic://). Requires PAHO_WITH_SSL and a Paho C library built with QUIC." FALSE)
 
 if(NOT PAHO_BUILD_SHARED AND NOT PAHO_BUILD_STATIC)
     message(FATAL_ERROR "You must set either PAHO_BUILD_SHARED, PAHO_BUILD_STATIC, or both")
+endif()
+
+if(PAHO_WITH_QUIC AND NOT PAHO_WITH_SSL)
+    message(FATAL_ERROR "PAHO_WITH_QUIC requires PAHO_WITH_SSL")
 endif()
 
 # --- Setting naming variables ---
@@ -56,16 +61,27 @@ set(PAHO_MQTTPP_GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 ## --- Find Paho C or build it, if reqested ---
 
 if(PAHO_WITH_SSL)
-    find_package(OpenSSL REQUIRED)
+    # When the bundled C library will fetch and build OpenSSL itself (typical
+    # for QUIC on hosts whose system OpenSSL has no QUIC API), skip the early
+    # system OpenSSL requirement so configure can succeed without one.
+    if(NOT (PAHO_WITH_MQTT_C AND DEFINED PAHO_OPENSSL_SOURCE AND PAHO_OPENSSL_SOURCE STREQUAL "fetch"))
+        find_package(OpenSSL REQUIRED)
+    endif()
     set(PAHO_MQTT_C_LIB eclipse-paho-mqtt-c::paho-mqtt3as)
 else()
     set(PAHO_MQTT_C_LIB eclipse-paho-mqtt-c::paho-mqtt3a)
 endif()
 
+if(PAHO_WITH_QUIC)
+    message(STATUS "QUIC: Requested (Paho C must be built with PAHO_WITH_QUIC)")
+endif()
+
 if(PAHO_WITH_MQTT_C)
     message(STATUS "Paho C: Bundled")
 
-    ## Build the Paho C library from the submodule
+    ## Build the Paho C library from the submodule.
+    ## PAHO_WITH_QUIC is the same cache option as the C library; enabling it
+    ## here also enables quic:// in the bundled paho-mqtt3as.
     set(PAHO_ENABLE_TESTING FALSE CACHE BOOL "No Paho C tests")
     set(PAHO_HIGH_PERFORMANCE TRUE CACHE BOOL "Paho C high performance")
     if(NOT WIN32)
@@ -73,7 +89,7 @@ if(PAHO_WITH_MQTT_C)
     endif()
     set(CMAKE_C_STANDARD 99 CACHE STRING "Paho C language standard")
 
-    add_subdirectory(${PROJECT_SOURCE_DIR}/externals/paho.mqtt.c)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/externals/paho-mqtt-c)
 
     ## Alias namespace so that the full names can be used with the subdir.
     if(PAHO_BUILD_SHARED)
