@@ -56,8 +56,18 @@ if(PAHO_WITH_SSL)
     set(SSL_EXECUTABLES ssl_publish)
 endif()
 
+# These will only be built if QUIC is requested (requires SSL and a
+# QUIC-enabled Paho C library).
+if(PAHO_WITH_QUIC)
+    set(QUIC_EXECUTABLES
+        quic_publish
+        quic_subscribe
+        quic_fallback
+    )
+endif()
+
 ## Build the example apps
-foreach(EXECUTABLE ${EXECUTABLES} ${SSL_EXECUTABLES})
+foreach(EXECUTABLE ${EXECUTABLES} ${SSL_EXECUTABLES} ${QUIC_EXECUTABLES})
     add_executable(${EXECUTABLE} ${EXECUTABLE}.cpp)
     target_link_libraries(${EXECUTABLE} PahoMqttCpp::paho-mqttpp3)
 
@@ -72,15 +82,15 @@ foreach(EXECUTABLE ${EXECUTABLES} ${SSL_EXECUTABLES})
     endif()
 endforeach()
 
-## Extra configuration for the SSL/TLS examples, if selected
-foreach(EXECUTABLE ${SSL_EXECUTABLES})
+## Extra configuration for the SSL/TLS and QUIC examples, if selected
+foreach(EXECUTABLE ${SSL_EXECUTABLES} ${QUIC_EXECUTABLES})
     target_compile_definitions(${EXECUTABLE} PUBLIC OPENSSL)
 endforeach()
 
 ## install binaries
 include(GNUInstallDirs)
 
-install(TARGETS ${EXECUTABLES} ${SSL_EXECUTABLES}
+install(TARGETS ${EXECUTABLES} ${SSL_EXECUTABLES} ${QUIC_EXECUTABLES}
     EXPORT PahoMqttCppSamples
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

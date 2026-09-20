@@ -1,3 +1,5 @@
-[submodule "externals/paho.mqtt.c"]
-	path = externals/paho.mqtt.c
-	url = https://github.com/eclipse/paho.mqtt.c.git
+# Paho C with MQTT over QUIC support (v1.3.16 + PAHO_WITH_QUIC)
+[submodule "externals/paho-mqtt-c"]
+	path = externals/paho-mqtt-c
+	url = https://github.com/lizhanhui/paho.mqtt.c.git
+	branch = develop

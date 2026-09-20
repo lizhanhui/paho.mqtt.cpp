@@ -14,6 +14,7 @@ The library has the following features:
     - WebSockets
         - Secure and insecure
         - Proxy support
+    - QUIC (`quic://`, always TLS-secured; requires Paho C built with `PAHO_WITH_QUIC`)
 - Message persistence
     - User configurable
     - Built-in File persistence
@@ -33,6 +34,10 @@ To keep up with the latest announcements for this project, or to ask questions:
 **Mastodon:** [@fpagliughi@fosstodon.org](https://fosstodon.org/@fpagliughi)
 
 **Email:** [Eclipse Paho Mailing List](https://accounts.eclipse.org/mailing-list/paho-dev)
+
+### What's New
+
+MQTT over QUIC is now supported when the linked Paho C library is built with `PAHO_WITH_QUIC`. Use a `quic://host:port` URI (default port 14567), supply `ssl_options` on connect, and see the `quic_publish`, `quic_subscribe`, and `quic_fallback` examples.
 
 ### What's New in v1.6.x
 
@@ -83,13 +88,16 @@ Variable | Default Value | Description
 PAHO_BUILD_SHARED | TRUE (*nix), FALSE (Win32) | Whether to build the shared library
 PAHO_BUILD_STATIC | FALSE (*nix), TRUE (Win32) | Whether to build the static library
 PAHO_WITH_SSL | TRUE (*nix), FALSE (Win32) | Whether to build SSL/TLS support into the library
+PAHO_WITH_QUIC | FALSE | Enable MQTT over QUIC (`quic://`). Requires `PAHO_WITH_SSL` and a Paho C library built with QUIC. When `PAHO_WITH_MQTT_C` is on, this flag is passed through to the bundled C library.
 PAHO_BUILD_DOCUMENTATION | FALSE | Create the HTML API documentation (requires _Doxygen_)
 PAHO_BUILD_EXAMPLES | FALSE | Whether to build the example programs
 PAHO_BUILD_TESTS | FALSE | Build the unit tests. (Requires _Catch2_)
 PAHO_BUILD_DEB_PACKAGE | FALSE | Flag that configures cpack to build a Debian/Ubuntu package
 PAHO_WITH_MQTT_C | FALSE | Whether to build the bundled Paho C library
 
-Enabling `PAHO_WITH_MQTT_C` builds and links in the Paho C library using compatible build options. If this is enabled, it passes the `PAHO_WITH_SSL` option to the C library, and also sets the options `PAHO_HIGH_PERFORMANCE` and `PAHO_WITH_UNIX_SOCKETS` for the C lib. These can be disabled in the cache before building if desired.
+Enabling `PAHO_WITH_MQTT_C` builds and links in the Paho C library using compatible build options. If this is enabled, it passes the `PAHO_WITH_SSL` option (and `PAHO_WITH_QUIC`, if set) to the C library, and also sets the options `PAHO_HIGH_PERFORMANCE` and `PAHO_WITH_UNIX_SOCKETS` for the C lib. These can be disabled in the cache before building if desired.
+
+QUIC requires OpenSSL 3.2 or later built with the QUIC API (`OSSL_QUIC_client_thread_method`). Many system OpenSSL installs still lack this. When building the bundled C library, either point CMake at a QUIC-capable OpenSSL with `OPENSSL_ROOT_DIR`, or let the C library fetch and build one with `-DPAHO_OPENSSL_SOURCE=fetch`.
 
 In addition, the C++ build might commonly use `CMAKE_PREFIX_PATH` to help the build system find the location of the Paho C library if it was built separately.
 
@@ -110,6 +118,14 @@ $ sudo cmake --build build/ --target install
 ```
 
 This assumes the build tools and dependencies, such as OpenSSL, have already been installed. For more details and platform-specific requirements, see below.
+
+To enable MQTT over QUIC in the bundled C library and build the QUIC examples:
+
+```
+$ cmake -Bbuild -H. -DPAHO_WITH_MQTT_C=ON -DPAHO_WITH_SSL=ON -DPAHO_WITH_QUIC=ON -DPAHO_BUILD_EXAMPLES=ON
+```
+
+If the system OpenSSL has no QUIC API (older than 3.2, or built with `no-quic`), add `-DPAHO_OPENSSL_SOURCE=fetch` or set `OPENSSL_ROOT_DIR` to a QUIC-capable OpenSSL.
 
 ### Unix-style Systems (Linux, macOS, etc)
 
@@ -242,7 +258,7 @@ The 64-bit target can be selected using the CMake generator switch, *-G*, at con
 
 ## Supported Network Protocols
 
-The library supports connecting to an MQTT server/broker using TCP, SSL/TLS, and websockets both (secure and insecure). On *nix targets, UNIX-domain sockets are also supported. The underlying transport is chosen by the URI supplied to indicate the remote host. It can be specified as:
+The library supports connecting to an MQTT server/broker using TCP, SSL/TLS, websockets (secure and insecure), and QUIC. On *nix targets, UNIX-domain sockets are also supported. The underlying transport is chosen by the URI supplied to indicate the remote host. It can be specified as:
 
     "mqtt://<host>:<port>"   - TCP, unsecure
      "tcp://<host>:<port>"    (same)
@@ -256,13 +272,24 @@ The library supports connecting to an MQTT server/broker using TCP, SSL/TLS, and
 	"unix://<path>"          - A UNIX-domain socket on the local machine.
 	                           (*nix systems, only)
 
+    "quic://<host>:<port>"  - QUIC (always TLS-secured)
+
 The "mqtt://" and "tcp://" schemas are identical. They indicate an insecure connection over TCP. The "mqtt://" variation is new for the library, but becoming more common across different MQTT libraries.
 
 Similarly, the "mqtts://" and "ssl://" schemas are identical. They specify a secure connection over SSL/TLS sockets.
 
-Note that to use any of the secure connect options, "mqtts://, "ssl://", or "wss://" you must compile the library with the `PAHO_WITH_SSL=ON` CMake option to include OpenSSL. In addition, you _must_ specify `ssl_options` when you connect to the broker - i.e. you must add an instance of `ssl_options` to the `connect_options` when calling `connect()`.
+Note that to use any of the secure connect options, "mqtts://", "ssl://", "wss://", or "quic://" you must compile the library with the `PAHO_WITH_SSL=ON` CMake option to include OpenSSL. In addition, you _must_ specify `ssl_options` when you connect to the broker - i.e. you must add an instance of `ssl_options` to the `connect_options` when calling `connect()`.
 
 The use of Unix-domain sockets is only available on *nix-style systems like Linux and macOS. It is not available on Windows. It requires the Paho C library built with the CMake option of PAHO_WITH_UNIX_SOCKETS=ON. This is done by default when building the C library automatically with the Git submodule.
+
+The "quic://" schema specifies MQTT over QUIC, which is always secured with TLS (QUIC does not allow unencrypted connections). Both the C++ `async_client` and blocking `client` can use it, because both wrap the Paho C MQTTAsync library. Requirements and characteristics:
+
+- **Paho C with QUIC** — the linked Paho C library must be built with `PAHO_WITH_SSL=TRUE` and `PAHO_WITH_QUIC=TRUE`. Enable the matching C++ flag, `PAHO_WITH_QUIC=ON`, to pass that option through to a bundled C build and to build the QUIC examples (`quic_publish`, `quic_subscribe`, `quic_fallback`).
+- **OpenSSL 3.2 or later, built with QUIC** — the C library uses the OpenSSL QUIC API (`OSSL_QUIC_client_thread_method`). LibreSSL and OpenSSL 1.x do not support QUIC. If the system OpenSSL has no QUIC support, point `OPENSSL_ROOT_DIR` at one that does, or use `-DPAHO_OPENSSL_SOURCE=fetch` when building the bundled C library.
+- **ALPN** — the C library negotiates the `mqtt` ALPN protocol. You do not need to set ALPN protocols in `ssl_options` for QUIC.
+- **Default port** — a `quic://` URI without an explicit port defaults to 14567 (the port used by EMQX and Tencent TDMQ for MQTT over QUIC).
+- **No automatic TCP fallback** — if UDP is blocked, a `quic://` attempt fails by timeout rather than falling back to TCP. For fallback, set `servers()` with a `quic://` URI first and an `ssl://` (or `tcp://`) URI second.
+- **No HTTP(S) proxies** — `http_proxy` / `https_proxy` are TCP CONNECT tunnels and cannot carry QUIC. A `quic://` attempt with a proxy configured fails that URI so `servers()` can fall through to `ssl://`.
 
 ## _Catch2_ Unit Tests
 
